@@ -1,9 +1,11 @@
-name: Build & Push Docker Image
+name: Build & Push — Dev
 
 on:
   push:
     tags:
-      - '[0-9]+.[0-9]+.[0-9]+'
+      - '*'
+    branches-ignore:
+      - '**' # non triggerare sui branch, solo sui tag
   workflow_dispatch: # consente avvio manuale dalla UI GitHub
 
 permissions:
@@ -12,7 +14,7 @@ permissions:
 
 env:
   GAR_HOSTNAME: ${{ vars.GAR_LOCATION }}-docker.pkg.dev
-  IMAGE: ${{ vars.GAR_LOCATION }}-docker.pkg.dev/${{ vars.GAR_PROJECT_ID }}/${{ vars.GAR_REPOSITORY }}/maia-gatus
+  IMAGE: ${{ vars.GAR_LOCATION }}-docker.pkg.dev/${{ vars.GAR_PROJECT_ID }}/${{ vars.GAR_REPOSITORY_DEV }}/maia-status
 
 jobs:
   build-push:
