@@ -9,7 +9,7 @@ on:
 env:
   GAR_PROJECT_ID: maia-artifacts
   GAR_LOCATION: europe-west8
-  REPOSITORY: build
+  REPOSITORY: public
   SERVICE: maia-status
 
 jobs:
