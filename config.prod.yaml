@@ -2,8 +2,8 @@ web:
   port: 8080
 
 storage:
-  type: sqlite
-  path: /data/gatus.db
+  type: postgres
+  path: "$GATUS_DB_URL"
   caching: true
   maximum-number-of-results: 43200
   maximum-number-of-events: 50

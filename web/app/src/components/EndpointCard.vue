@@ -41,7 +41,7 @@
                 'flex-1 h-6 sm:h-8 rounded-sm transition-all',
                 result ? 'cursor-pointer' : '',
                 result ? (
-                  result.success 
+                  result.success
                     ? (selectedResultIndex === index ? 'bg-green-700' : 'bg-green-500 hover:bg-green-700')
                     : (selectedResultIndex === index ? 'bg-red-700' : 'bg-red-500 hover:bg-red-700')
                 ) : 'bg-gray-200 dark:bg-gray-700'
@@ -55,6 +55,34 @@
             <span>{{ oldestResultTime }}</span>
             <span>{{ newestResultTime }}</span>
           </div>
+        </div>
+
+        <!-- Uptime badges + SSL indicator -->
+        <div class="flex items-center justify-between pt-1 border-t border-border/50">
+          <div class="flex items-center gap-1.5">
+            <img
+              :src="`/api/v1/endpoints/${endpoint.key}/uptimes/7d/badge.svg`"
+              alt="Uptime 7d"
+              class="h-5"
+              loading="lazy"
+            />
+            <img
+              :src="`/api/v1/endpoints/${endpoint.key}/uptimes/30d/badge.svg`"
+              alt="Uptime 30d"
+              class="h-5"
+              loading="lazy"
+            />
+          </div>
+          <span
+            v-if="sslStatus !== null"
+            :class="['text-xs font-medium flex items-center gap-1', sslStatus ? 'text-green-600' : 'text-red-500']"
+            title="SSL certificate status"
+          >
+            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
+            </svg>
+            SSL
+          </span>
         </div>
       </div>
     </CardContent>
@@ -104,6 +132,16 @@ const currentStatus = computed(() => {
 
 const hostname = computed(() => {
   return latestResult.value?.hostname || null
+})
+
+// Returns true if SSL condition passed, false if failed, null if not evaluated
+const sslStatus = computed(() => {
+  if (!latestResult.value?.conditionResults) return null
+  const sslCondition = latestResult.value.conditionResults.find(
+    c => c.condition && c.condition.includes('CERTIFICATE_EXPIRATION')
+  )
+  if (!sslCondition) return null
+  return sslCondition.success
 })
 
 const displayResults = computed(() => {

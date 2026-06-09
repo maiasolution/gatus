@@ -19,3 +19,9 @@ node_modules
 gatus
 config/config.yml
 config.yaml
+
+# Secrets (mai committare)
+.env
+*.env
+*.pem
+*.key

@@ -19,26 +19,7 @@
                 target="_blank"
                 :class="['flex items-center gap-3', link && 'hover:opacity-80 transition-opacity']"
               >
-                <div class="w-12 h-12 flex items-center justify-center">
-                  <img 
-                    v-if="logo" 
-                    :src="logo" 
-                    alt="Gatus" 
-                    class="w-full h-full object-contain"
-                  />
-                  <img 
-                    v-else 
-                    src="./assets/logo.svg" 
-                    alt="Gatus" 
-                    class="w-full h-full object-contain"
-                  />
-                </div>
-                <div>
-                  <h1 class="text-2xl font-bold tracking-tight">{{ header }}</h1>
-                  <p v-if="buttons && buttons.length" class="text-sm text-muted-foreground">
-                    System Monitoring Dashboard
-                  </p>
-                </div>
+                <MaiaLogo style="height: 28px; width: auto;" />
               </component>
             </div>
 
@@ -112,12 +93,9 @@
     <div v-else id="login-container" class="flex items-center justify-center min-h-screen p-4">
       <Card class="w-full max-w-md">
         <CardHeader class="text-center">
-          <div v-if="logo" class="flex items-center justify-center gap-4 mb-4">
-            <img :src="logo" alt="" class="w-20 h-20 object-contain" />
-            <div class="w-px h-12 bg-border"></div>
-            <img src="./assets/logo.svg" alt="Gatus" class="w-20 h-20" />
+          <div class="flex justify-center mb-4">
+            <MaiaLogo style="height: 40px; width: auto;" />
           </div>
-          <img v-else src="./assets/logo.svg" alt="Gatus" class="w-20 h-20 mx-auto mb-4" />
           <CardTitle class="text-3xl">{{ header }}</CardTitle>
           <p class="text-muted-foreground mt-2">{{ loginSubtitle }}</p>
         </CardHeader>
@@ -162,6 +140,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import Social from './components/Social.vue'
 import Tooltip from './components/Tooltip.vue'
 import Loading from './components/Loading.vue'
+import MaiaLogo from './components/MaiaLogo.vue'
 
 const route = useRoute()
 
@@ -176,10 +155,6 @@ const tooltipIsPersistent = ref(false)
 let configInterval = null
 
 // Computed properties
-const logo = computed(() => {
-  return window.config && window.config.logo && window.config.logo !== '{{ .UI.Logo }}' ? window.config.logo : ""
-})
-
 const header = computed(() => {
   return window.config && window.config.header && window.config.header !== '{{ .UI.Header }}' ? window.config.header : "Gatus"
 })

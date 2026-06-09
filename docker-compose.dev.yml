@@ -1,0 +1,22 @@
+services:
+  gatus:
+    image: twinproduction/gatus:latest
+    container_name: gatus-dev
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config.yaml:/config/config.yaml:ro
+      - gatus-data:/data
+    environment:
+      - GATUS_CONFIG_PATH=/config/config.yaml
+      - ENVIRONMENT=dev
+      - GATUS_LOG_LEVEL=INFO
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  gatus-data:
