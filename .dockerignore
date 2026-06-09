@@ -3,6 +3,6 @@ Dockerfile
 .github
 .idea
 .git
-web/app
+web/app/node_modules
 *.db
 testdata
