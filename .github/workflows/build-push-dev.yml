@@ -3,7 +3,7 @@ name: Build & Push — Dev
 on:
   push:
     tags:
-      - '*'
+      - 'dev*'
   workflow_dispatch:
 
 env:
