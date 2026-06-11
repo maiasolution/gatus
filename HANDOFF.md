@@ -1,7 +1,7 @@
 # HANDOFF — Gatus Maia Solution Status Page
 
 > Documento di handoff per continuare il lavoro in una nuova sessione.
-> Ultimo aggiornamento: 2026-06-10
+> Ultimo aggiornamento: 2026-06-11
 
 ---
 
@@ -24,12 +24,14 @@
   - `build-push-dev.yml` — trigger su tag `dev*` → push a GAR
   - `build-push-prod.yml` — trigger su tag semver `X.Y.Z` → push a GAR
 - Build locale testata e funzionante: `docker build -t maia-status:local .`
+- **Feature maintenance events** (commit `81a4c1b8`) — finestre di manutenzione ad-hoc per endpoint via file JSON, hot-reloaded senza restart (vedi sezione 9)
 
 ### In corso / Pendente ⏳
 - Deploy del container su Hetzner (vedi `TODO.md` per checklist dettagliata)
 - Verifica endpoint Clack API (`/health` restituisce 403 — URL da correggere)
 - Setup DNS `gatus.maiasolution.it` → IP Hetzner
 - Reverse proxy (Caddy o Nginx) con TLS davanti alla porta 8080
+- Sul server Hetzner: creare `/opt/gatus/maintenance-events.json` (anche vuoto `{}`) e montarlo nel container (vedi sezione 9)
 
 ---
 
@@ -88,6 +90,13 @@ causerebbe un parse error del template Go).
 | `.github/workflows/build-push-dev.yml` | Build + push su tag `dev*` |
 | `.github/workflows/build-push-prod.yml` | Build + push su tag semver (`1.0.0`) |
 
+### Manutenzione eventi
+| File | Scopo |
+|------|-------|
+| `maintenance-events.json` | File JSON con finestre di manutenzione ad-hoc per endpoint — modificabile a runtime senza restart |
+| `config/maintenance/events.go` | **NUOVO** — EventsStore: legge il file, rileva modifiche via mtime, espone eventi al watchdog e all'API |
+| `api/maintenance.go` | **NUOVO** — Handler `GET /api/v1/maintenance` |
+
 ### Frontend modificato (rispetto a TwiN/gatus upstream)
 | File | Modifica |
 |------|---------|
@@ -98,6 +107,9 @@ causerebbe un parse error del template Go).
 | `web/app/src/views/EndpointDetails.vue` | Uptime stats (24h/7d/30d), barra 30 giorni giornaliera, response time chart |
 | `web/app/src/index.css` | Colori CSS var: `--primary: 210 100% 40%` (#0066CC), accent #00AAFF |
 | `web/app/public/index.html` | Dev fallback IIFE, favicon light/dark, fix titolo tab |
+| `web/app/src/App.vue` | Fetch `GET /api/v1/maintenance` al mount (refresh 5 min), `provide` dati ai componenti figli |
+| `web/app/src/components/EndpointCard.vue` | Badge arancione (manutenzione attiva) / blu (pianificata entro 24h) |
+| `web/app/src/views/EndpointDetails.vue` | Sezione "Scheduled Maintenance" con badge In corso / Pianificata / Completata |
 
 ### Documentazione
 | File | Scopo |
@@ -272,6 +284,61 @@ output diversi (`access_token` vs `auth_token`).
 ### Workflow TwiN rimossi
 I workflow originali `publish-*.yml` e `regenerate-static-assets.yml` sono stati **eliminati**
 perché tentavano push su Docker Hub/GHCR con credenziali mancanti. Non ripristinarli.
+
+### maintenance-events.json — formato e hot-reload
+Il file è letto automaticamente dal watchdog ad ogni check cycle (ogni 60 secondi per default).
+**Non è necessario riavviare il container** per applicare le modifiche.
+
+**Struttura del file:**
+```json
+{
+  "<endpoint-key>": [
+    {
+      "id": "identificativo-unico",
+      "description": "Descrizione leggibile dell'evento",
+      "start": "2026-06-15T22:00:00+02:00",
+      "end":   "2026-06-16T00:00:00+02:00"
+    }
+  ]
+}
+```
+
+**Campi:**
+| Campo | Tipo | Obbligatorio | Note |
+|-------|------|:---:|-------|
+| `id` | string | ✅ | Identificativo libero, appare nei log |
+| `description` | string | ✅ | Label mostrata nel frontend |
+| `start` | RFC3339 datetime | ✅ | Includere sempre il timezone (`+02:00` per CEST) |
+| `end` | RFC3339 datetime | ✅ | Includere sempre il timezone |
+
+**Come si calcola l'endpoint key:**
+`group` + `_` + `name`, tutto lowercase, spazi → `-`, `/` → `-`, `.` → `-`
+
+Esempi:
+| Group | Name | Key |
+|-------|------|-----|
+| Core | Clack API | `core_clack-api` |
+| Core | Clack Frontend | `core_clack-frontend` |
+
+**Effetti durante una finestra attiva:**
+- I check vengono eseguiti normalmente (i dati di response time restano visibili)
+- I contatori di uptime **non vengono aggiornati** → il downtime pianificato non abbassa la percentuale SLO
+- Gli alert non vengono inviati (comportamento già esistente della `maintenance` globale di Gatus)
+- Frontend: badge arancione "Manutenzione fino alle HH:MM" sulla card
+
+**File vuoto (nessuna manutenzione attiva):**
+```json
+{}
+```
+
+**Deploy su Hetzner — aggiungere al comando `docker run`:**
+```bash
+-v /opt/gatus/maintenance-events.json:/config/maintenance-events.json:ro
+```
+Il file `config.prod.yaml` ha già la riga `maintenance-events-file: /config/maintenance-events.json`.
+Creare il file sul server prima del primo avvio: `echo '{}' > /opt/gatus/maintenance-events.json`
+
+---
 
 ### MaiaLogo dark mode
 `MaiaLogo.vue` usa un `MutationObserver` su `document.documentElement` per rilevare il toggle
