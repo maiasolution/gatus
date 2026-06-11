@@ -104,5 +104,8 @@ func AddResult(ss *endpoint.Status, result *endpoint.Result, maximumNumberOfResu
 		// MaximumNumberOfResults by using ss.Results[len(ss.Results)-MaximumNumberOfResults:] instead
 		ss.Results = ss.Results[len(ss.Results)-maximumNumberOfResults:]
 	}
-	processUptimeAfterResult(ss.Uptime, result)
+	// Skip uptime accounting when the check ran during a scheduled maintenance event.
+	if !result.DuringMaintenance {
+		processUptimeAfterResult(ss.Uptime, result)
+	}
 }

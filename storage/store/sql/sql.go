@@ -332,6 +332,11 @@ func (s *Store) InsertEndpointResult(ep *endpoint.Endpoint, result *endpoint.Res
 	}
 	// Finally, we need to insert the uptime data.
 	// Because the uptime data significantly outlives the results, we can't rely on the results for determining the uptime
+	// Skip uptime accounting when the check ran during a scheduled maintenance event.
+	if result.DuringMaintenance {
+		_ = tx.Commit()
+		return nil
+	}
 	if err = s.updateEndpointUptime(tx, endpointID, result); err != nil {
 		logr.Errorf("[sql.InsertEndpointResult] Failed to update uptime for endpoint with key=%s: %s", ep.Key(), err.Error())
 	}

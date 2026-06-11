@@ -132,7 +132,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, provide } from 'vue'
 import { useRoute } from 'vue-router'
 import { Menu, X, LogIn } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
@@ -145,6 +145,9 @@ import MaiaLogo from './components/MaiaLogo.vue'
 const route = useRoute()
 
 // State
+const maintenanceEvents = ref({})
+provide('maintenanceEvents', maintenanceEvents)
+
 const retrievedConfig = ref(false)
 const config = ref({ oidc: false, authenticated: true })
 const announcements = ref([])
@@ -172,6 +175,17 @@ const loginSubtitle = computed(() => {
 })
 
 // Methods
+const fetchMaintenanceEvents = async () => {
+  try {
+    const response = await fetch('/api/v1/maintenance', { credentials: 'include' })
+    if (response.status === 200) {
+      maintenanceEvents.value = await response.json()
+    }
+  } catch (error) {
+    console.error('Failed to fetch maintenance events:', error)
+  }
+}
+
 const fetchConfig = async () => {
   try {
     const response = await fetch(`/api/v1/config`, { credentials: 'include' })
@@ -225,8 +239,11 @@ const handleDocumentClick = (event) => {
 // Fetch config on mount and set up interval
 onMounted(() => {
   fetchConfig()
+  fetchMaintenanceEvents()
   // Refresh config every 10 minutes for announcements
   configInterval = setInterval(fetchConfig, 600000)
+  // Refresh maintenance events every 5 minutes
+  setInterval(fetchMaintenanceEvents, 300000)
   // Add click listener for closing persistent tooltips
   document.addEventListener('click', handleDocumentClick)
 })

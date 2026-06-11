@@ -6,6 +6,7 @@ import (
 
 	"github.com/TwiN/gatus/v5/config"
 	"github.com/TwiN/gatus/v5/config/endpoint"
+	"github.com/TwiN/gatus/v5/config/maintenance"
 	"github.com/TwiN/gatus/v5/metrics"
 	"github.com/TwiN/gatus/v5/storage/store"
 	"github.com/TwiN/logr"
@@ -49,6 +50,14 @@ func executeEndpoint(ep *endpoint.Endpoint, cfg *config.Config, extraLabels []st
 	result := ep.EvaluateHealth()
 	if cfg.Metrics {
 		metrics.PublishMetricsForEndpoint(ep, result, extraLabels)
+	}
+	// Mark the result if a scheduled maintenance event is currently active for this endpoint.
+	if evStore := maintenance.GetEventsStore(); evStore != nil {
+		evStore.ReloadIfModified()
+		if evStore.IsEndpointUnderMaintenance(ep.Key()) {
+			logr.Debugf("[watchdog.executeEndpoint] Endpoint %s is under a scheduled maintenance event; uptime will not be updated", ep.Key())
+			result.DuringMaintenance = true
+		}
 	}
 	UpdateEndpointStatus(ep, result)
 	if logr.GetThreshold() == logr.LevelDebug && !result.Success {

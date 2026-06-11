@@ -171,6 +171,49 @@
             </CardContent>
           </Card>
 
+          <!-- ── SCHEDULED MAINTENANCE ─────────────────────────────────── -->
+          <Card v-if="endpointMaintenanceEvents.length > 0">
+            <CardHeader>
+              <CardTitle>Scheduled Maintenance</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div class="space-y-3">
+                <div
+                  v-for="event in endpointMaintenanceEvents"
+                  :key="event.id"
+                  class="flex items-start gap-4 pb-3 border-b last:border-0"
+                >
+                  <!-- Status dot -->
+                  <div class="mt-1 flex-shrink-0">
+                    <span
+                      :class="[
+                        'inline-block w-2.5 h-2.5 rounded-full mt-1',
+                        maintenanceEventStatus(event) === 'active'   ? 'bg-orange-500 animate-pulse' :
+                        maintenanceEventStatus(event) === 'upcoming' ? 'bg-blue-500' : 'bg-gray-400'
+                      ]"
+                    />
+                  </div>
+                  <!-- Info -->
+                  <div class="flex-1 min-w-0">
+                    <p class="font-medium text-sm">{{ event.description || event.id }}</p>
+                    <p class="text-xs text-muted-foreground mt-0.5">{{ formatMaintenanceWindow(event) }}</p>
+                  </div>
+                  <!-- Badge -->
+                  <span
+                    :class="[
+                      'flex-shrink-0 text-xs font-medium px-2 py-0.5 rounded-full',
+                      maintenanceEventStatus(event) === 'active'   ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
+                      maintenanceEventStatus(event) === 'upcoming' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                                                                     'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                    ]"
+                  >
+                    {{ maintenanceEventStatus(event) === 'active' ? 'In corso' : maintenanceEventStatus(event) === 'upcoming' ? 'Pianificata' : 'Completata' }}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <!-- ── EVENTS ──────────────────────────────────────────────────── -->
           <Card v-if="events && events.length > 0">
             <CardHeader>
@@ -206,7 +249,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, inject, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ArrowLeft, RefreshCw, ArrowUpCircle, ArrowDownCircle, PlayCircle, Activity, Timer } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
@@ -222,6 +265,8 @@ import { generatePrettyTimeAgo, generatePrettyTimeDifference } from '@/utils/tim
 const router = useRouter()
 const route = useRoute()
 const emit = defineEmits(['showTooltip'])
+
+const maintenanceEvents = inject('maintenanceEvents', ref({}))
 
 const endpointStatus = ref(null)
 const currentStatus = ref(null)
@@ -308,6 +353,13 @@ const dailyBarCoverage = computed(() => {
   if (daysWithData === 0) return 'No historical data yet'
   if (daysWithData === 30) return '30 / 30 days covered'
   return `${daysWithData} / 30 days covered`
+})
+
+// Maintenance events for the current endpoint, sorted by start date (newest first).
+const endpointMaintenanceEvents = computed(() => {
+  const key = route.params.key
+  const events = (maintenanceEvents.value[key] || []).slice()
+  return events.sort((a, b) => new Date(b.start) - new Date(a.start))
 })
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -417,6 +469,27 @@ const toggleShowAverageResponseTime = () => {
 }
 
 const prettifyTimestamp = (ts) => new Date(ts).toLocaleString()
+
+const formatMaintenanceWindow = (event) => {
+  const start = new Date(event.start)
+  const end = new Date(event.end)
+  const sameDay = start.toLocaleDateString() === end.toLocaleDateString()
+  const dateStr = start.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' })
+  const startTime = start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const endTime = end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return sameDay
+    ? `${dateStr}  ${startTime} – ${endTime}`
+    : `${start.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })} ${startTime} – ${end.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })} ${endTime}`
+}
+
+const maintenanceEventStatus = (event) => {
+  const now = Date.now()
+  const s = new Date(event.start).getTime()
+  const e = new Date(event.end).getTime()
+  if (now >= s && now < e) return 'active'
+  if (s > now) return 'upcoming'
+  return 'past'
+}
 
 onMounted(() => {
   fetchData()

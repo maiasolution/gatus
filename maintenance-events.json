@@ -1,0 +1,18 @@
+{
+  "core_clack-api": [
+    {
+      "id": "maint-2026-06-11-test",
+      "description": "Test manutenzione programmata",
+      "start": "2026-06-11T00:00:00+02:00",
+      "end": "2026-06-11T23:59:00+02:00"
+    }
+  ],
+  "core_clack-frontend": [
+    {
+      "id": "maint-2026-06-11-frontend",
+      "description": "Manutenzione Clack Frontend",
+      "start": "2026-06-11T13:00:00+02:00",
+      "end": "2026-06-11T13:10:00+02:00"
+    }
+  ]
+}

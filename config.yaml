@@ -1,6 +1,8 @@
 web:
   port: 8080
 
+maintenance-events-file: /config/maintenance-events.json
+
 storage:
   type: sqlite
   path: /data/gatus.db

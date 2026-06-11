@@ -51,6 +51,11 @@ type Result struct {
 	// It is used for health evaluation as well as debugging purposes.
 	Body []byte `json:"-"`
 
+	// DuringMaintenance is true when this check occurred inside a scheduled maintenance event.
+	// When set, uptime counters are not updated so planned downtime does not affect SLO metrics.
+	// Not persisted in storage.
+	DuringMaintenance bool `json:"-"`
+
 	///////////////////////////////////////////////////////////////////////
 	// Below is used only for the UI and is not persisted in the storage //
 	///////////////////////////////////////////////////////////////////////

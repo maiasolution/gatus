@@ -21,8 +21,25 @@
             <span v-if="hostname" class="truncate" :title="hostname">{{ hostname }}</span>
           </div>
         </div>
-        <div class="flex-shrink-0 ml-2">
+        <div class="flex-shrink-0 ml-2 flex flex-col items-end gap-1">
           <StatusBadge :status="currentStatus" />
+          <span
+            v-if="maintenanceBadgeLabel"
+            :class="[
+              'inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border',
+              activeMaintenance
+                ? 'bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-700'
+                : 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700'
+            ]"
+            :title="activeMaintenance ? activeMaintenance.description : upcomingMaintenance.description"
+          >
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            {{ maintenanceBadgeLabel }}
+          </span>
         </div>
       </div>
     </CardHeader>
@@ -90,13 +107,14 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, inject, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import StatusBadge from '@/components/StatusBadge.vue'
 import { generatePrettyTimeAgo } from '@/utils/time'
 
 const router = useRouter()
+const maintenanceEvents = inject('maintenanceEvents', ref({}))
 
 const props = defineProps({
   endpoint: {
@@ -198,6 +216,34 @@ const oldestResultTime = computed(() => {
 const newestResultTime = computed(() => {
   if (!props.endpoint.results || props.endpoint.results.length === 0) return ''
   return generatePrettyTimeAgo(props.endpoint.results[props.endpoint.results.length - 1].timestamp)
+})
+
+// Returns the active maintenance event for this endpoint, or null.
+const activeMaintenance = computed(() => {
+  const events = maintenanceEvents.value[props.endpoint.key] || []
+  const now = Date.now()
+  return events.find(e => new Date(e.start).getTime() <= now && new Date(e.end).getTime() > now) || null
+})
+
+// Returns the next upcoming maintenance event within 24 h, or null.
+const upcomingMaintenance = computed(() => {
+  if (activeMaintenance.value) return null
+  const events = maintenanceEvents.value[props.endpoint.key] || []
+  const now = Date.now()
+  const in24h = now + 24 * 60 * 60 * 1000
+  return events.find(e => new Date(e.start).getTime() > now && new Date(e.start).getTime() <= in24h) || null
+})
+
+const maintenanceBadgeLabel = computed(() => {
+  if (activeMaintenance.value) {
+    const end = new Date(activeMaintenance.value.end)
+    return `Manutenzione fino alle ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+  }
+  if (upcomingMaintenance.value) {
+    const start = new Date(upcomingMaintenance.value.start)
+    return `Manutenzione alle ${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+  }
+  return null
 })
 
 const navigateToDetails = () => {

@@ -123,6 +123,10 @@ type Config struct {
 	// Announcements is the list of system-wide announcements
 	Announcements []*announcement.Announcement `yaml:"announcements,omitempty"`
 
+	// MaintenanceEventsFile is the optional path to a JSON file containing ad-hoc maintenance events.
+	// The file is watched at runtime and reloaded automatically when it changes.
+	MaintenanceEventsFile string `yaml:"maintenance-events-file,omitempty"`
+
 	configPath      string    // path to the file or directory from which config was loaded
 	lastFileModTime time.Time // last modification time
 }
@@ -332,6 +336,7 @@ func parseAndValidateConfigBytes(yamlBytes []byte) (config *Config, err error) {
 		if err := ValidateAnnouncementsConfig(config); err != nil {
 			return nil, err
 		}
+		maintenance.InitEventsStore(config.MaintenanceEventsFile)
 		if err := ValidateSuitesConfig(config); err != nil {
 			return nil, err
 		}
